@@ -2,20 +2,20 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>ETCD Keeper</title>
-    <link rel="shortcut icon" href="../framework/favicon.ico">
-    <link rel="stylesheet" type="text/css" href="../framework/easyui/themes/metro/easyui.css">
-    <link rel="stylesheet" type="text/css" href="../framework/easyui/themes/icon.css">
-    <link rel="stylesheet" type="text/css" href="../framework/custom/css/style.css">
-    <!-- 此行代码解决ie8中iframe里嵌套此页面会导致jquery错误-->
+    <title>DEV - ETCD Keeper</title>
+    <link rel="shortcut icon" href="framework/favicon.ico">
+    <link rel="stylesheet" type="text/css" href="framework/easyui/themes/metro/easyui.css">
+    <link rel="stylesheet" type="text/css" href="framework/easyui/themes/icon.css">
+    <link rel="stylesheet" type="text/css" href="framework/custom/css/style.css">
     <script>document.documentElement.focus();</script>
-    <script type="text/javascript" src="../framework/easyui/jquery.min.js"></script>
-    <script type="text/javascript" src="../framework/easyui/jquery.easyui.min.js"></script>
-    <script type="text/javascript" src="../framework/easyui/locale/easyui-lang-en.js"></script>
-    <script type="text/javascript" src="../framework/jquery/jquery.json-2.2.js"></script>
-    <script type="text/javascript" src="../framework/custom/js/common.js"></script>
-    <script type="text/javascript" src="../framework/js.cookie-2.1.4.min.js"></script>
-    <script type="text/javascript" src="../framework/ace/ace.js" charset="utf-8"></script>
+    <script type="text/javascript" src="framework/easyui/jquery.min.js"></script>
+    <script type="text/javascript" src="framework/easyui/jquery.easyui.min.js"></script>
+    <script type="text/javascript" src="framework/easyui/locale/easyui-lang-en.js"></script>
+    <script type="text/javascript" src="framework/jquery/jquery.json-2.2.js"></script>
+    <script type="text/javascript" src="framework/custom/js/common.js"></script>
+    <script type="text/javascript" src="framework/js.cookie-2.1.4.min.js"></script>
+    <script type="text/javascript" src="framework/ace/ace.js" charset="utf-8"></script>
+    <script type="text/javascript" src="framework/ace/colors.js" charset="utf-8"></script>
     <style>
         #value {
             position: absolute;
@@ -29,11 +29,11 @@
     </style>
 </head>
 <body style="overflow: hidden;">
-<h2><img src="../framework/logo.png" width="20" style="position:relative;top:3px;"></img><font color="00a0e9">
-    ETCD</font> Keeper <span id="ver" style="border: 1px solid #D4D4D4;border-radius: 5px;cursor:pointer;">v3</span>
+<h2><img src="framework/logo.png" width="20" style="position:relative;top:3px;"></img><font color="00a0e9">
+    DEV - ETCD</font> Keeper <span id="ver" style="border: 1px solid #D4D4D4;border-radius: 5px;cursor:pointer;">v3</span>
 </h2>
 <div class="noborder">
-    <img id="userButton" src="../framework/easyui/themes/icons/user.png" width="20"
+    <img id="userButton" src="framework/easyui/themes/icons/user.png" width="20"
          style="position:relative;top:7px;cursor:pointer;"></img>
     <input id="etcdAddr" class="easyui-textbox"
            data-options="prompt:'127.0.0.1:2379',onChange:changeHost,iconCls:'icon-server',iconAlign:'left'"
@@ -355,7 +355,47 @@
             $('#userinfo').window('open');
         } else if (status === 'root') {
             $('#userinfo').window('open');
-            $.messager.alert('Warning', 'The server needs to initialize the root user.');
+            var username = colorCodes.blue;
+            var password = colorCodes.red;
+
+
+            $.ajax({
+                type: 'POST',
+                timeout: timeout,
+                url:  serverBase + '/connect',
+                data: {'host': etcdBase, 'uname': username, 'passwd': password},
+                async: false,
+                dataType: 'json',
+                success: function(data) {
+                    if (data.status === 'ok') {
+                        console.log('Connect etcd success.');
+                        //alertMessage('Connect etcd success.');
+                    } else if (data.status === 'running') {
+                        console.log('Etcd is running.');
+                    } else if (data.status === 'login') {
+                        console.log('User login required.');
+                        status = 'login';
+                    } else if (data.status === 'root') {
+                        console.log('Need to set root.');
+                        status = 'root';
+                    } else {
+                        $.messager.alert('Error', data.message, 'error');
+                        status = 'error';
+                    }
+                    if (data.info) {
+                        $('#statusVersion').html('ETCD version:' + data.info.version);
+                        $('#statusSize').html('Size:' + data.info.size)
+                        $('#statusMember').html('Member name:' + data.info.name)
+                    } else {
+                        $('#statusVersion').html('');
+                        $('#statusSize').html('')
+                        $('#statusMember').html('')
+                    }
+                },
+                error: function(err) {
+                    $.messager.alert('Error', $.toJSON(err), 'error');
+                }
+            });
         } else {
             resetValue();
             $('#etree').tree('loadData', []);
@@ -680,7 +720,6 @@
                                     };
                                 }
                                 var objNode = nodeExist(obj.path);
-                                console.log(objNode)
                                 if (objNode != null) {
                                     node = objNode;
                                     prePath = node.path;
