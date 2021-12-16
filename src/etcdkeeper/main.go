@@ -31,7 +31,7 @@ var (
 	cacert         = flag.String("cacert", "", "verify certificates of TLS-enabled secure servers using this CA bundle (v3)")
 	cert           = flag.String("cert", "", "identify secure client using this TLS certificate file (v3)")
 	keyfile        = flag.String("key", "", "identify secure client using this TLS key file (v3)")
-	useAuth        = flag.Bool("auth", false, "use auth")
+	useAuth        = flag.Bool("auth", true, "use auth")
 	connectTimeout = flag.Int("timeout", 5, "ETCD client connect timeout")
 	rootUsers      = make(map[string]*userInfo) // host:rootUser
 	rootUesrsV2    = make(map[string]*userInfo) // host:rootUser
@@ -569,15 +569,17 @@ func connect(w http.ResponseWriter, r *http.Request) {
 	passwd := r.FormValue("passwd")
 
 	if *useAuth {
-		if _, ok := rootUsers[host]; !ok && uname != "root" { // no root user
-			b, _ := json.Marshal(map[string]interface{}{"status": "root"})
-			io.WriteString(w, string(b))
-			return
-		}
+		//if _, ok := rootUsers[host]; !ok && uname != "root" { // no root user
+		//	b, _ := json.Marshal(map[string]interface{}{"status": "root"})
+		//	io.WriteString(w, string(b))
+		//	return
+		//}
 		if uname == "" || passwd == "" {
 			b, _ := json.Marshal(map[string]interface{}{"status": "login"})
 			io.WriteString(w, string(b))
 			return
+		} else {
+
 		}
 	}
 
@@ -602,9 +604,9 @@ func connect(w http.ResponseWriter, r *http.Request) {
 	_ = sess.Set("uinfo", uinfo)
 
 	if *useAuth {
-		if uname == "root" {
-			rootUsers[host] = uinfo
-		}
+		//if uname == "root" {
+		rootUsers[host] = uinfo
+		//}
 	} else {
 		rootUsers[host] = uinfo
 	}
@@ -1198,35 +1200,35 @@ func getPermissionPrefix(host, uname, key string) ([][]string, error) {
 		}
 		defer rootCli.Close()
 
-		if resp, err := rootCli.UserList(context.Background()); err != nil {
+		//if resp, err := rootCli.UserList(context.Background()); err != nil {
+		//	return nil, err
+		//} else {
+		// Find user permissions
+		set := make(map[string]string)
+		//for _, u := range resp.Users {
+		//	if u == uname {
+		ur, err := rootCli.UserGet(context.Background(), uname)
+		if err != nil {
 			return nil, err
-		} else {
-			// Find user permissions
-			set := make(map[string]string)
-			for _, u := range resp.Users {
-				if u == uname {
-					ur, err := rootCli.UserGet(context.Background(), u)
-					if err != nil {
-						return nil, err
-					}
-					for _, r := range ur.Roles {
-						rr, err := rootCli.RoleGet(context.Background(), r)
-						if err != nil {
-							return nil, err
-						}
-						for _, p := range rr.Perm {
-							set[string(p.Key)] = string(p.RangeEnd)
-						}
-					}
-					break
-				}
-			}
-			var pers [][]string
-			for k, v := range set {
-				pers = append(pers, []string{k, v})
-			}
-			return pers, nil
 		}
+		for _, r := range ur.Roles {
+			rr, err := rootCli.RoleGet(context.Background(), r)
+			if err != nil {
+				return nil, err
+			}
+			for _, p := range rr.Perm {
+				set[string(p.Key)] = string(p.RangeEnd)
+			}
+		}
+		//break
+		//}
+		//}
+		var pers [][]string
+		for k, v := range set {
+			pers = append(pers, []string{k, v})
+		}
+		return pers, nil
+		//}
 	}
 }
 
